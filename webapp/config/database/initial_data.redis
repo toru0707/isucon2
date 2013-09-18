@@ -1,0 +1,17 @@
+DEL artists
+DEL tickets_1
+DEL tickets_2
+DEL ticket_remain_1
+DEL ticket_remain_2
+
+RPUSH artists '{"id":1,"name":"NHN48"}'
+RPUSH artists '{"id":2,"name":"はだいろクローバーZ"}'
+
+RPUSH tickets_1 '{"id":1,"name":"西武ドームライブ"}'
+RPUSH tickets_1 '{"id":2,"name":"東京ドームライブ"}'
+RPUSH tickets_2 '{"id":3,"name":"さいたまスーパーアリーナライブ"}'
+RPUSH tickets_2 '{"id":4,"name":"横浜アリーナライブ"}'
+RPUSH tickets_2 '{"id":5,"name":"西武ドームライブ"}'
+
+SET ticket_remain_1 8192
+SET ticket_remain_2 8192

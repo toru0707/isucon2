@@ -2,52 +2,48 @@ var fs     = require('fs');
 var async  = require('async');
 var mysql  = require('mysql');
 var config = require('../config');
+var redis = require("redis");
+var client = redis.createClient();
 
+client.on("error", function (err) {
+    console.log("Error " + err);
+});
 // main
 
 exports.index = function (req, res) {
-    var client = mysql.createClient(config.database);
-    client.query('SELECT * FROM artist', function (err, results) {
+    client.lrange('artists', 0, -1, function(err, results) {
         if (err) { throw err; }
-        client.end();
-        res.render('index', { artists: results });
+        var artists = [];
+        results.forEach(function(e) {
+            artists.push(JSON.parse(e));
+        });
+        res.render('index', { artists: artists });
     });
 };
 
 exports.artist = function (req, res) {
-    var client = mysql.createClient(config.database);
     async.series([
         function (callback) {
-            client.query(
-                'SELECT id, name FROM artist WHERE id = ? LIMIT 1',
-                [ req.params.artistid ],
-                callback
-            );
+            client.lrange('artists', req.params.artistid - 1, req.params.artistid, callback);
         },
         function (callback) {
-            client.query(
-                'SELECT id, name FROM ticket WHERE artist_id = ?',
-                [ req.params.artistid ],
-                callback
-            );
+            client.lrange('tickets_' + req.params.artistid, 0, -1, callback);
         }
     ], function (err, results) {
         if (err) { throw err; }
-        var artist  = results[0][0][0];
-        var tickets = results[1][0];
+        var artist  = JSON.parse(results[0][0]);
+        var tickets = [];
+        results[1].forEach(function(str) {
+            tickets.push(JSON.parse(str));
+        });
 
         async.map(tickets, function (ticket, callback) {
-            client.query(
-                'SELECT COUNT(*) AS count FROM variation INNER JOIN stock ON stock.variation_id = variation.id WHERE variation.ticket_id = ? AND stock.order_id IS NULL',
-                [ ticket.id ],
-                callback
-            );
+            client.get('ticket_remain_' + ticket.id, callback);
         }, function (err, results) {
             if (err) { throw err; }
             results.forEach(function (e, i) {
-                tickets[i].count = e[0].count;
+                tickets[i].count = e;
             });
-            client.end();
             res.render('artist', {
                 artist: artist,
                 tickets: tickets
