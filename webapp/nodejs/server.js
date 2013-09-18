@@ -40,6 +40,10 @@ if (cluster.isMaster) {
     app.post('/admin', routes_admin.post_index);
     app.get('/admin/order.csv', routes_admin.order_csv);
 
+    // for rendering
+    app.post('/ticket/update_cache',routes_index.ticket_update_cache);
+    app.get('/ticket_test/:ticketid',routes_index.ticket_test);
+
     http.createServer(app).listen(app.get('port'), function () {
         console.log("Express server listening on port " + app.get('port'));
     });

@@ -2,6 +2,7 @@ var fs     = require('fs');
 var async  = require('async');
 var mysql  = require('mysql');
 var config = require('../config');
+var memcache  = require('memcache');
 
 // main
 
@@ -109,6 +110,131 @@ exports.ticket = function (req, res) {
                 ticket: ticket,
                 variations: variations
             });
+        });
+    });
+};
+
+//renderingした後にmemcachedに格納するようにする
+exports.ticket_update_cache = function (req, res) {
+    var client = mysql.createClient(config.database);
+    async.series([
+        function (callback) {
+            client.query(
+                'SELECT t.*, a.name AS artist_name FROM ticket t INNER JOIN artist a ON t.artist_id = a.id WHERE t.id = ? LIMIT 1',
+                [ req.params.ticketid ],
+                callback
+            );
+        },
+        function (callback) {
+            client.query(
+                'SELECT id, name FROM variation WHERE ticket_id = ?',
+                [ req.params.ticketid ],
+                callback
+            );
+        }
+    ], function (err, results) {
+        if (err) { throw err; }
+        var ticket = results[0][0][0];
+        var variations = results[1][0];
+
+        async.map(variations, function (variation, callback) {
+            async.series([
+                function (callback) {
+                    client.query(
+                        'SELECT seat_id, order_id FROM stock WHERE variation_id = ?',
+                        [ variation.id ],
+                        callback
+                    );
+                },
+                function (callback) {
+                    client.query(
+                        'SELECT COUNT(*) AS count FROM stock WHERE variation_id = ? AND order_id IS NULL',
+                        [ variation.id ],
+                        callback
+                    );
+                }
+            ], callback);
+        }, function (err, results) {
+            if (err) { throw err; }
+            results.forEach(function (e, i) {
+                variations[i].stock = {};
+                e[0][0].forEach(function (e) {
+                    variations[i].stock[e.seat_id] = e;
+                });
+                variations[i].vacancy = e[1][0][0].count;
+            });
+            client.end();
+            res.render('ticket', {
+                ticket: ticket,
+                variations: variations
+            });
+        });
+    });
+};
+
+exports.ticket_test = function (req, res) {
+    var client = mysql.createClient(config.database);
+    var memclient = new memcache.Client(config.memcached.port, config.memcached.host);
+    async.series([
+        function (callback) {
+            client.query(
+                'SELECT t.*, a.name AS artist_name FROM ticket t INNER JOIN artist a ON t.artist_id = a.id WHERE t.id = ? LIMIT 1',
+                [ req.params.ticketid ],
+                callback
+            );
+        },
+        function (callback) {
+            client.query(
+                'SELECT id, name FROM variation WHERE ticket_id = ?',
+                [ req.params.ticketid ],
+                callback
+            );
+        }
+    ], function (err, results) {
+        if (err) { throw err; }
+        var ticket = results[0][0][0];
+        var variations = results[1][0];
+
+        async.map(variations, function (variation, callback) {
+            async.series([
+                function (callback) {
+                    client.query(
+                        'SELECT seat_id, order_id FROM stock WHERE variation_id = ?',
+                        [ variation.id ],
+                        callback
+                    );
+                },
+                function (callback) {
+                    client.query(
+                        'SELECT COUNT(*) AS count FROM stock WHERE variation_id = ? AND order_id IS NULL',
+                        [ variation.id ],
+                        callback
+                    );
+                }
+            ], callback);
+        }, function (err, results) {
+            if (err) { throw err; }
+            results.forEach(function (e, i) {
+                variations[i].stock = {};
+                e[0][0].forEach(function (e) {
+                    variations[i].stock[e.seat_id] = e;
+                });
+                variations[i].vacancy = e[1][0][0].count;
+            });
+            client.end();
+	    s_time = new Date().getTime()
+            res.render('ticket', {
+                ticket: ticket,
+                variations: variations
+            },
+	    function(err, html){
+		e_time = new Date().getTime()
+	        console.log("era : " + (e_time - s_time))	
+		memclient.connect()
+		memclient.set("t:" + req.params.ticketid, html)
+		memclient.close()
+		res.send(html)	
+	    });
         });
     });
 };

@@ -7,6 +7,10 @@ module.exports = (function () {
             user: "root",
             password: "",
             database: "isucon2"
-        }
+        },
+	memcached: {
+		host:"192.168.10.10",
+		port:11211
+	}
     };
 }());
