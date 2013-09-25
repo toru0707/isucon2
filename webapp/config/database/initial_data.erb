@@ -1,0 +1,40 @@
+DEL artists
+DEL tickets_1
+DEL tickets_2
+DEL ticket_remain_1
+DEL ticket_remain_2
+<% for i in 1..10 %>
+DEL tickets_<%= i %>
+DEL stock_<%= i %>
+DEL stock_remain_<%= i %>
+DEL stock_limit_<%= i %>
+<% end %>
+
+
+RPUSH artists '{"id":1,"name":"NHN48"}'
+RPUSH artists '{"id":2,"name":"はだいろクローバーZ"}'
+
+RPUSH tickets_1 '{"id":1,"name":"西武ドームライブ"}'
+RPUSH tickets_1 '{"id":2,"name":"東京ドームライブ"}'
+RPUSH tickets_2 '{"id":3,"name":"さいたまスーパーアリーナライブ"}'
+RPUSH tickets_2 '{"id":4,"name":"横浜アリーナライブ"}'
+RPUSH tickets_2 '{"id":5,"name":"西武ドームライブ"}'
+
+SET ticket_1 '{"id":1,"name":"西武ドームライブ","artist_name":"NHN48","variation":[{"id":1,"name":"アリーナ席"},{"id":2,"name":"スタンド席"}]}'
+SET ticket_2 '{"id":2,"name":"東京ドームライブ","artist_name":"NHN48","variation":[{"id":3,"name":"アリーナ席"},{"id":4,"name":"スタンド席"}]}'
+SET ticket_3 '{"id":3,"name":"さいたまスーパーアリーナライブ","artist_name":"はだいろクローバーZ","variation":[{"id":5,"name":"アリーナ席"},{"id":6,"name":"スタンド席"}]}'
+SET ticket_4 '{"id":4,"name":"横浜アリーナライブ","artist_name":"はだいろクローバーZ","variation":[{"id":7,"name":"アリーナ席"},{"id":8,"name":"スタンド席"}]}'
+SET ticket_5 '{"id":5,"name":"西武ドームライブ","artist_name":"はだいろクローバーZ","variation":[{"id":9,"name":"アリーナ席"},{"id":10,"name":"スタンド席"}]}'
+
+<% for variation_id in 1..10 %>
+<% "00".upto "64" do |i| %>
+<% "00".upto "64" do |j| %>
+RPUSH stock_<%= variation_id %> 0
+<% end %>
+<% end %>
+<% end %>
+
+<% for i in 1..10 %>
+SET stock_remain_<%= i %> 8192
+SET stock_limit_<%= i %> 8192
+<% end %>
